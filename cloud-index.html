@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<!-- Versão do app com persistência GitHub Issues/Actions -->
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciador de Hospedagens - Cloud Persist</title>
+</head>
+<body>
+    <div id="app">Carregando...</div>
+    <script>
+    const REPO_OWNER = 'Adaga02';
+    const REPO_NAME = 'hospedagens-japao-dubai';
+    const STORAGE_FILE = 'data/accommodations.json';
+    const BRANCH = 'main';
+
+    // Salva localmente para UX rápida
+    function saveLocal(data){ localStorage.setItem('accommodations', JSON.stringify(data)); }
+    function loadLocal(){ try{ return JSON.parse(localStorage.getItem('accommodations')||'[]'); }catch(e){return []}}
+
+    async function githubApi(path, method='GET', body){
+      const headers = {'Accept':'application/vnd.github+json'};
+      const token = localStorage.getItem('gh_token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`https://api.github.com${path}`, {method, headers, body: body?JSON.stringify(body):undefined});
+      if (!res.ok) throw new Error(`GitHub API ${res.status}`);
+      return res.json();
+    }
+
+    async function getFileSha(){
+      try{
+        const f = await githubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/contents/${STORAGE_FILE}?ref=${BRANCH}`);
+        return f.sha;
+      }catch(e){ return null; }
+    }
+
+    async function loadCloud(){
+      try{
+        const f = await githubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/contents/${STORAGE_FILE}?ref=${BRANCH}`);
+        const content = atob(f.content.replace(/\n/g,''));
+        const data = JSON.parse(content);
+        saveLocal(data);
+        return data;
+      }catch(e){
+        console.warn('Sem arquivo remoto, usando localStorage');
+        return loadLocal();
+      }
+    }
+
+    async function saveCloud(data){
+      const token = localStorage.getItem('gh_token');
+      if (!token){
+        alert('Para persistência global, insira um GitHub Token (repo public)');
+        return;
+      }
+      const sha = await getFileSha();
+      const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+      await githubApi(`/repos/${REPO_OWNER}/${REPO_NAME}/contents/${STORAGE_FILE}`, 'PUT', {
+        message: 'chore(data): update accommodations via web UI',
+        content,
+        branch: BRANCH,
+        sha: sha || undefined,
+      });
+    }
+
+    // UI mínima
+    let state = [];
+
+    function render(){
+      const el = document.getElementById('app');
+      el.innerHTML = `
+        <h1>Hospedagens - Persistência GitHub</h1>
+        <p>Para salvar globalmente, informe um <b>GitHub Fine-grained PAT</b> com permissão de conteúdo de repositório público:</p>
+        <input id="token" placeholder="ghp_..." style="width:280px" />
+        <button id="saveToken">Salvar Token</button>
+        <button id="clearToken">Remover Token</button>
+        <p><small>Os dados também ficam em localStorage para uso offline, mas a versão canônica vai para o arquivo JSON no repositório.</small></p>
+        <hr />
+        <div>
+          <input id="city" placeholder="Cidade"/>
+          <input id="hotel" placeholder="Hotel"/>
+          <input id="dates" placeholder="2025-03-01 a 2025-03-03"/>
+          <button id="add">Adicionar</button>
+          <button id="sync">Sincronizar com GitHub</button>
+        </div>
+        <ul>
+          ${state.map((x,i)=>`<li>[${x.cidade}] ${x.hotel} - ${x.datas} <button data-i="${i}" class="del">Excluir</button></li>`).join('')}
+        </ul>
+      `;
+      document.getElementById('token').value = localStorage.getItem('gh_token')||'';
+      document.getElementById('saveToken').onclick = ()=>{ localStorage.setItem('gh_token', document.getElementById('token').value.trim()); alert('Token salvo localmente.'); };
+      document.getElementById('clearToken').onclick = ()=>{ localStorage.removeItem('gh_token'); document.getElementById('token').value=''; };
+      document.getElementById('add').onclick = ()=>{
+        const c = document.getElementById('city').value.trim();
+        const h = document.getElementById('hotel').value.trim();
+        const d = document.getElementById('dates').value.trim();
+        if(!c||!h||!d){ alert('Preencha tudo'); return; }
+        state.push({cidade:c, hotel:h, datas:d});
+        saveLocal(state); render();
+      };
+      document.querySelectorAll('.del').forEach(btn=>btn.onclick=(e)=>{
+        const i = +e.target.getAttribute('data-i');
+        state.splice(i,1); saveLocal(state); render();
+      });
+      document.getElementById('sync').onclick = async ()=>{
+        try{ await saveCloud(state); alert('Sincronizado com sucesso!'); }
+        catch(e){ alert('Falha ao salvar no GitHub: '+e.message); }
+      };
+    }
+
+    (async function init(){
+      // Carrega primeiro do local, depois tenta cloud para todos verem
+      state = loadLocal();
+      render();
+      state = await loadCloud();
+      render();
+    })();
+    </script>
+</body>
+</html>
