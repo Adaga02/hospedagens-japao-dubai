@@ -7,8 +7,48 @@
     <link rel="stylesheet" href="app.css">
 </head>
 <body>
-    <header class="app-header"><h1>Hospedagens</h1></header>
-    <main id="app-root"></main>
-    <script src="app.js"></script>
+<header class="app-header">
+  <div class="container">
+    <div class="header-content">
+      <div class="logo-title">
+        <img src="" alt="" style="display:none"/>
+        <div>
+          <h1>Gerenciador de Hospedagens - Viagem Japão & Dubai</h1>
+          <p class="subtitle">Planejamento colaborativo da viagem</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <div class="flex gap-8">
+          <button class="btn btn--secondary btn--sm" onclick="showAddModal()">+ Nova Hospedagem</button>
+          <button class="btn btn--outline btn--sm" onclick="showExportModal()">📤 Exportar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+<main class="container">
+  <div class="filters-bar">
+    <div class="flex gap-16 items-center">
+      <div class="form-group" style="margin-bottom:0;min-width:200px;">
+        <label class="form-label" for="personFilter">Filtrar por pessoa:</label>
+        <select id="personFilter" class="form-control" onchange="filterByPerson()">
+          <option value="">Todas as pessoas</option>
+        </select>
+      </div>
+      <div class="flex gap-8">
+        <button class="btn btn--sm btn--outline" onclick="showAllCities()">Todas as cidades</button>
+        <button class="btn btn--sm btn--secondary" onclick="showConfirmedOnly()">Apenas confirmadas</button>
+      </div>
+    </div>
+  </div>
+  <div id="citiesContainer" class="city-grid"></div>
+  <div class="export-section">
+    <h3>📊 Resumo da Viagem</h3>
+    <p id="tripSummary" style="margin-bottom:var(--space-16);"></p>
+    <button class="btn btn--primary" onclick="generateShareableLink()">🔗 Gerar Link Compartilhável</button>
+  </div>
+</main>
+<!-- Modais e templates continuam no app.js para simplificar -->
+<script src="app.js"></script>
 </body>
 </html>
