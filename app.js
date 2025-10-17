@@ -1,2 +1,2 @@
-// JavaScript original completo do seu index.html
-// (mantendo toda a lógica: initializeData, renderCities, modais, exportação, filtros, resumo, link compartilhável)
+// JS do novo layout enviado
+// Conteúdo completo colado conforme arquivo
